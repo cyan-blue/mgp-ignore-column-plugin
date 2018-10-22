@@ -1,0 +1,1 @@
+# mgp-ignore-column-plugin
