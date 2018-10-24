@@ -7,7 +7,7 @@
     <classPathEntry location="/Users/huangyan/software/mybatis generator/lib/mysql-connector-java-5.1.30.jar" />
     <context id="DB2Tables" targetRuntime="MyBatis3">
 
-        <plugin type="com.nn.mybatis.plugins.MySQLIgnoreColumnPlugin">
+        <plugin type="com.nn.mybatis.plugins.IgnoreColumnPlugin">
 
         </plugin>
         <commentGenerator>
@@ -40,7 +40,7 @@
                enableCountByExample="false" enableUpdateByExample="true"
                enableDeleteByExample="false" enableSelectByExample="true"
                selectByExampleQueryId="false">
-            <property name="ignoreColumn" value="test,test1"/>
+            <property name="ignoreColumns" value="create_by,create_time"/>
             <!--<ignoreColumn column="create_by"/>-->
         </table>
 
