@@ -158,7 +158,6 @@ public class IgnoreColumnPlugin extends PluginAdapter {
     private boolean isTextElementNeedIgnore(Element ele, List<String> oneTableIgnore) {
         String text = ((TextElement) ele).getContent().trim();
         for (String oneIgnore : oneTableIgnore) {
-            System.out.println(text);
             if (text.matches("^" + oneIgnore + " =.*")) {
                 return true;
             }
