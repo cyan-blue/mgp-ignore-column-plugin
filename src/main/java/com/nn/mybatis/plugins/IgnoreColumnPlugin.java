@@ -4,6 +4,7 @@ import org.mybatis.generator.api.IntrospectedColumn;
 import org.mybatis.generator.api.IntrospectedTable;
 import org.mybatis.generator.api.PluginAdapter;
 import org.mybatis.generator.api.ShellRunner;
+import org.mybatis.generator.api.dom.java.Method;
 import org.mybatis.generator.api.dom.java.TopLevelClass;
 import org.mybatis.generator.api.dom.xml.Element;
 import org.mybatis.generator.api.dom.xml.TextElement;
@@ -44,6 +45,19 @@ public class IgnoreColumnPlugin extends PluginAdapter {
         return true;
     }
 
+    @Override
+    public boolean modelSetterMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedColumn introspectedColumn, IntrospectedTable introspectedTable, ModelClassType modelClassType) {
+        String tableName = introspectedTable.getTableConfiguration().getTableName();
+        List<String> oneTableIgnore = ignoreColumns.get(tableName);
+        if (oneTableIgnore == null || oneTableIgnore.size() == 0) {
+            return super.modelSetterMethodGenerated(method, topLevelClass, introspectedColumn, introspectedTable, modelClassType);
+        }
+        String columnName = introspectedColumn.getActualColumnName();
+        if (oneTableIgnore.contains(columnName)) {
+            return false;
+        }
+        return super.modelSetterMethodGenerated(method, topLevelClass, introspectedColumn, introspectedTable, modelClassType);
+    }
 
     @Override
     public boolean sqlMapSelectByExampleWithoutBLOBsElementGenerated(XmlElement element,
@@ -95,7 +109,9 @@ public class IgnoreColumnPlugin extends PluginAdapter {
     private void ignoreColumnsElement(List<Element> elements, IntrospectedTable introspectedTable) {
         String tableName = introspectedTable.getTableConfiguration().getTableName();
         List<String> oneTableIgnore = ignoreColumns.get(tableName);
-
+        if (oneTableIgnore == null || oneTableIgnore.size() == 0) {
+            return;
+        }
         List<Element> needIgnore = new ArrayList<>();
         for (Element ele : elements) {
             if (ele instanceof TextElement) {
