@@ -44,7 +44,5 @@
             <property name="ignoreColumnModelFields" value="createBy,createTime,methods"/>
         </table>
 
-
-
     </context>
 </generatorConfiguration>

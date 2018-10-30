@@ -15,12 +15,16 @@ import org.mybatis.generator.config.TableConfiguration;
 import java.util.*;
 
 /**
+ * select查询不进行忽略， insert和update忽略字段
+ * <p>
+ * 需要配置
+ *
  * @author admin
  */
 public class IgnoreColumnPlugin extends PluginAdapter {
 
     /**
-     * 要忽略的列
+     * 要忽略的数据库列
      */
     private Map<String, List<String>> ignoreColumns = new HashMap<>();
 
@@ -41,9 +45,13 @@ public class IgnoreColumnPlugin extends PluginAdapter {
         return true;
     }
 
-
+    /**
+     * 初始化阶段
+     * 具体执行顺序 http://www.mybatis.org/generator/reference/pluggingIn.html
+     */
     @Override
-    public boolean modelExampleClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+    public void initialized(IntrospectedTable introspectedTable) {
+        super.initialized(introspectedTable);
         // 初始化配置
         TableConfiguration tableConfiguration = introspectedTable.getTableConfiguration();
         Properties properties = tableConfiguration.getProperties();
@@ -57,7 +65,6 @@ public class IgnoreColumnPlugin extends PluginAdapter {
                 ignoreColumnModelFields.putIfAbsent(tableConfiguration.getTableName(), oneTableIgnoreColumns);
             }
         }
-        return true;
     }
 
     @Override
@@ -72,12 +79,6 @@ public class IgnoreColumnPlugin extends PluginAdapter {
             return false;
         }
         return super.modelSetterMethodGenerated(method, topLevelClass, introspectedColumn, introspectedTable, modelClassType);
-    }
-
-    @Override
-    public boolean sqlMapSelectByExampleWithoutBLOBsElementGenerated(XmlElement element,
-                                                                     IntrospectedTable introspectedTable) {
-        return true;
     }
 
 
@@ -289,11 +290,5 @@ public class IgnoreColumnPlugin extends PluginAdapter {
 
     public static void main(String[] args) {
         generate();
-        String content = "#{interfaces,jdbcType=LONGVARCHAR}, #{methods,jdbcType=LONGVARCHAR})";
-
-
-        System.out.println(content.replaceAll("#\\{methods,jdbcType=\\S+}\\)", ")"));
-        System.out.println(content);
-
     }
 }
