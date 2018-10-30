@@ -1,5 +1,6 @@
 package com.nn.mybatis.plugins;
 
+import com.nn.mybatis.plugins.util.FieldUtils;
 import com.nn.mybatis.plugins.util.ReflectionUtils;
 import org.mybatis.generator.api.IntrospectedColumn;
 import org.mybatis.generator.api.IntrospectedTable;
@@ -38,10 +39,6 @@ public class IgnoreColumnPlugin extends PluginAdapter {
      */
     private static final String IGNORE_COLUMNS_FLAG = "igcIgnoreColumns";
 
-    /**
-     * 需要忽略的数据库列对应的model名称配置
-     */
-    private static final String IGNORE_COLUMN_MODEL_FIELDS_FLAG = "igcIgnoreColumnModelFields";
 
     @Override
     public boolean validate(List<String> list) {
@@ -62,10 +59,11 @@ public class IgnoreColumnPlugin extends PluginAdapter {
             if (entryEntry.getKey().equals(IGNORE_COLUMNS_FLAG)) {
                 List<String> oneTableIgnoreColumns = Arrays.asList(entryEntry.getValue().toString().split(","));
                 ignoreColumns.putIfAbsent(tableConfiguration.getTableName(), oneTableIgnoreColumns);
-            }
-            if (entryEntry.getKey().equals(IGNORE_COLUMN_MODEL_FIELDS_FLAG)) {
-                List<String> oneTableIgnoreColumns = Arrays.asList(entryEntry.getValue().toString().split(","));
-                ignoreColumnModelFields.putIfAbsent(tableConfiguration.getTableName(), oneTableIgnoreColumns);
+                List<String> modelNameList = new ArrayList<>();
+                for(String oneModelName: oneTableIgnoreColumns) {
+                    modelNameList.add(FieldUtils.getModelNameByField(oneModelName));
+                }
+                ignoreColumnModelFields.putIfAbsent(tableConfiguration.getTableName(), modelNameList);
             }
         }
     }

@@ -15,8 +15,7 @@
             <property name="suppressAllComments" value="true" />
         </commentGenerator>
 
-        <jdbcConnection driverClass="com.mysql.jdbc.Driver"
-                        connectionURL="jdbc:mysql://ip:port/**" userId="**" password="***">
+        <jdbcConnection driverClass="com.mysql.jdbc.Driver" connectionURL="jdbc:mysql://10.24.76.230:5002/atc" userId="atc" password="bw5NgraRYrBzkI">
         </jdbcConnection>
 
         <javaTypeResolver>
@@ -40,8 +39,8 @@
                enableCountByExample="false" enableUpdateByExample="true"
                enableDeleteByExample="false" enableSelectByExample="true"
                selectByExampleQueryId="false">
-            <property name="igcIgnoreColumns" value="create_by,create_time,methods;createBy,createTime,methods"/>
-            <property name="igcIgnoreColumnModelFields" value="createBy,createTime,methods"/>
+            <property name="igcIgnoreColumns" value="create_by,create_time,methods"/>
+
         </table>
 
     </context>
