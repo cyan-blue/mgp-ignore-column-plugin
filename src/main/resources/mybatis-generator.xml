@@ -40,8 +40,8 @@
                enableCountByExample="false" enableUpdateByExample="true"
                enableDeleteByExample="false" enableSelectByExample="true"
                selectByExampleQueryId="false">
-            <property name="ignoreColumns" value="create_by,create_time,methods"/>
-            <property name="ignoreColumnModelFields" value="createBy,createTime,methods"/>
+            <property name="igcIgnoreColumns" value="create_by,create_time,methods;createBy,createTime,methods"/>
+            <property name="igcIgnoreColumnModelFields" value="createBy,createTime,methods"/>
         </table>
 
     </context>

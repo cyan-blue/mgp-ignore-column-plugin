@@ -34,11 +34,14 @@ public class IgnoreColumnPlugin extends PluginAdapter {
     private Map<String, List<String>> ignoreColumnModelFields = new HashMap<>();
 
     /**
-     * 需要忽略的
+     * 需要忽略的数据库列的配置
      */
-    private static final String IGNORE_COLUMNS_FLAG = "ignoreColumns";
+    private static final String IGNORE_COLUMNS_FLAG = "igcIgnoreColumns";
 
-    private static final String IGNORE_COLUMN_MODEL_FIELDS_FLAG = "ignoreColumnModelFields";
+    /**
+     * 需要忽略的数据库列对应的model名称配置
+     */
+    private static final String IGNORE_COLUMN_MODEL_FIELDS_FLAG = "igcIgnoreColumnModelFields";
 
     @Override
     public boolean validate(List<String> list) {
@@ -67,6 +70,7 @@ public class IgnoreColumnPlugin extends PluginAdapter {
         }
     }
 
+
     @Override
     public boolean modelSetterMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedColumn introspectedColumn, IntrospectedTable introspectedTable, ModelClassType modelClassType) {
         String tableName = introspectedTable.getTableConfiguration().getTableName();
@@ -74,6 +78,7 @@ public class IgnoreColumnPlugin extends PluginAdapter {
         if (oneTableIgnore == null || oneTableIgnore.size() == 0) {
             return super.modelSetterMethodGenerated(method, topLevelClass, introspectedColumn, introspectedTable, modelClassType);
         }
+        // 过滤掉生成的对象的set方法
         String columnName = introspectedColumn.getActualColumnName();
         if (oneTableIgnore.contains(columnName)) {
             return false;
