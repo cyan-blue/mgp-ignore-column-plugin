@@ -1,5 +1,6 @@
 package com.nn.mybatis.plugins;
 
+import com.nn.mybatis.plugins.util.ReflectionUtils;
 import org.mybatis.generator.api.IntrospectedColumn;
 import org.mybatis.generator.api.IntrospectedTable;
 import org.mybatis.generator.api.PluginAdapter;
@@ -23,7 +24,17 @@ public class IgnoreColumnPlugin extends PluginAdapter {
      */
     private Map<String, List<String>> ignoreColumns = new HashMap<>();
 
+    /**
+     * 要忽略的列的model名字
+     */
+    private Map<String, List<String>> ignoreColumnModelFields = new HashMap<>();
+
+    /**
+     * 需要忽略的
+     */
     private static final String IGNORE_COLUMNS_FLAG = "ignoreColumns";
+
+    private static final String IGNORE_COLUMN_MODEL_FIELDS_FLAG = "ignoreColumnModelFields";
 
     @Override
     public boolean validate(List<String> list) {
@@ -40,6 +51,10 @@ public class IgnoreColumnPlugin extends PluginAdapter {
             if (entryEntry.getKey().equals(IGNORE_COLUMNS_FLAG)) {
                 List<String> oneTableIgnoreColumns = Arrays.asList(entryEntry.getValue().toString().split(","));
                 ignoreColumns.putIfAbsent(tableConfiguration.getTableName(), oneTableIgnoreColumns);
+            }
+            if (entryEntry.getKey().equals(IGNORE_COLUMN_MODEL_FIELDS_FLAG)) {
+                List<String> oneTableIgnoreColumns = Arrays.asList(entryEntry.getValue().toString().split(","));
+                ignoreColumnModelFields.putIfAbsent(tableConfiguration.getTableName(), oneTableIgnoreColumns);
             }
         }
         return true;
@@ -65,100 +80,154 @@ public class IgnoreColumnPlugin extends PluginAdapter {
         return true;
     }
 
+
+    @Override
+    public boolean sqlMapInsertElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        insertIgnoreColumnsElementFilter(element.getElements(), introspectedTable);
+        return super.sqlMapInsertElementGenerated(element, introspectedTable);
+    }
+
+    @Override
+    public boolean sqlMapInsertSelectiveElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        insertSelectIgnoreColumnsElementFilter(element.getElements(), introspectedTable);
+        return super.sqlMapInsertSelectiveElementGenerated(element, introspectedTable);
+    }
+
     @Override
     public boolean sqlMapUpdateByExampleSelectiveElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
-        ignoreColumnsElement(element.getElements(), introspectedTable);
+        updateIgnoreColumnsElementFilter(element.getElements(), introspectedTable);
         return super.sqlMapUpdateByExampleSelectiveElementGenerated(element, introspectedTable);
     }
 
 
     @Override
     public boolean sqlMapUpdateByExampleWithBLOBsElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
-        ignoreColumnsElement(element.getElements(), introspectedTable);
+        updateIgnoreColumnsElementFilter(element.getElements(), introspectedTable);
         return super.sqlMapUpdateByExampleWithBLOBsElementGenerated(element, introspectedTable);
     }
 
     @Override
     public boolean sqlMapUpdateByExampleWithoutBLOBsElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
-        ignoreColumnsElement(element.getElements(), introspectedTable);
+        updateIgnoreColumnsElementFilter(element.getElements(), introspectedTable);
         return super.sqlMapUpdateByExampleWithoutBLOBsElementGenerated(element, introspectedTable);
     }
 
     @Override
     public boolean sqlMapUpdateByPrimaryKeySelectiveElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
-        ignoreColumnsElement(element.getElements(), introspectedTable);
+        updateIgnoreColumnsElementFilter(element.getElements(), introspectedTable);
         return super.sqlMapUpdateByPrimaryKeySelectiveElementGenerated(element, introspectedTable);
     }
 
     @Override
     public boolean sqlMapUpdateByPrimaryKeyWithBLOBsElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
-        ignoreColumnsElement(element.getElements(), introspectedTable);
+        updateIgnoreColumnsElementFilter(element.getElements(), introspectedTable);
         return super.sqlMapUpdateByPrimaryKeyWithBLOBsElementGenerated(element, introspectedTable);
     }
 
     @Override
     public boolean sqlMapUpdateByPrimaryKeyWithoutBLOBsElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
-        ignoreColumnsElement(element.getElements(), introspectedTable);
+        updateIgnoreColumnsElementFilter(element.getElements(), introspectedTable);
         return super.sqlMapUpdateByPrimaryKeyWithoutBLOBsElementGenerated(element, introspectedTable);
     }
 
 
     /**
-     * 忽略更新的字段
+     * 忽略insert语句中的字段
+     * insert mapper中类型有： 1. field_name, 2.#{modelName,jdbcType=*}, 3.长语句中包含上面两种
      */
-    private void ignoreColumnsElement(List<Element> elements, IntrospectedTable introspectedTable) {
+    private void insertIgnoreColumnsElementFilter(List<Element> elements, IntrospectedTable introspectedTable) {
         String tableName = introspectedTable.getTableConfiguration().getTableName();
         List<String> oneTableIgnore = ignoreColumns.get(tableName);
+        List<String> oneTableModelIgnore = ignoreColumnModelFields.get(tableName);
         if (oneTableIgnore == null || oneTableIgnore.size() == 0) {
             return;
         }
-        List<Element> needIgnore = new ArrayList<>();
+        if (oneTableModelIgnore == null || oneTableModelIgnore.size() == 0) {
+            return;
+        }
+        if (oneTableModelIgnore.size() != oneTableIgnore.size()) {
+            return;
+        }
+
         for (Element ele : elements) {
             if (ele instanceof TextElement) {
-                if (isTextElementNeedIgnore(ele, oneTableIgnore)) {
-                    needIgnore.add(ele);
+                String text = ((TextElement) ele).getContent();
+                for (String oneIgnore : oneTableModelIgnore) {
+                    String replaceText = text.replaceAll("#\\{" + oneIgnore + ",jdbcType=\\S+},", "");
+                    replaceText = replaceText.replaceAll("#\\{" + oneIgnore + ",jdbcType=\\S+}\\)", ")");
+                    if (!replaceText.equals(text)) {
+                        text = replaceText;
+                        ReflectionUtils.setFieldValue("content", ele, replaceText);
+                    }
+                }
+                // TODO 优化：要注意误替换！！！
+                for (String oneIgnore : oneTableIgnore) {
+                    String replaceText = text.replaceAll(oneIgnore + ",", "");
+                    replaceText = replaceText.replaceAll(oneIgnore + "\\)", ")");
+                    if (!replaceText.equals(text)) {
+                        text = replaceText;
+                        ReflectionUtils.setFieldValue("content", ele, replaceText);
+                    }
                 }
             }
-            if (ele instanceof XmlElement) {
-                xmlElementFilter(((XmlElement) ele).getElements(), oneTableIgnore);
-            }
         }
-        elements.removeAll(needIgnore);
     }
 
+    /**
+     * 忽略insert select语句中的字段
+     */
+    private void insertSelectIgnoreColumnsElementFilter(List<Element> elements, IntrospectedTable introspectedTable) {
+        String tableName = introspectedTable.getTableConfiguration().getTableName();
+        List<String> oneTableIgnore = ignoreColumns.get(tableName);
+        List<String> oneTableModelIgnore = ignoreColumnModelFields.get(tableName);
+        if (oneTableIgnore == null || oneTableIgnore.size() == 0) {
+            return;
+        }
+        if (oneTableModelIgnore == null || oneTableModelIgnore.size() == 0) {
+            return;
+        }
+        if (oneTableModelIgnore.size() != oneTableIgnore.size()) {
+            return;
+        }
 
-    private void xmlElementFilter(List<Element> elements, List<String> oneTableIgnore) {
-        List<Element> needIgnore = new ArrayList<>();
         for (Element ele : elements) {
             if (ele instanceof XmlElement) {
-                if (isXmlElementNeedIgnore(ele, oneTableIgnore)) {
-                    needIgnore.add(ele);
+                List<Element> effectEles = ((XmlElement) ele).getElements();
+                List<Element> needIgnore = new ArrayList<>();
+                for (Element oneEle : effectEles) {
+
+                    if (isXmlElementNeedIgnore(oneEle, oneTableModelIgnore, StatementTypeReplace.INSERT_SELECTIVE)) {
+                        needIgnore.add(oneEle);
+                    }
+
+                    if (isXmlElementNeedIgnore(oneEle, oneTableIgnore, StatementTypeReplace.FIELD_PLUS_COMMA)) {
+                        needIgnore.add(oneEle);
+                    }
                 }
+                effectEles.removeAll(needIgnore);
             }
         }
-        elements.removeAll(needIgnore);
     }
 
-    private boolean isXmlElementNeedIgnore(Element ele, List<String> oneTableIgnore) {
+    private boolean isXmlElementNeedIgnore(Element ele, List<String> oneTableIgnore, StatementTypeReplace statementTypeReplace) {
         for (Element oneEle : ((XmlElement) ele).getElements()) {
             if (oneEle instanceof TextElement) {
-                if (isTextElementNeedIgnore(oneEle, oneTableIgnore)) {
+                if (isTextElementNeedIgnore(oneEle, oneTableIgnore, statementTypeReplace)) {
                     return true;
                 }
             }
-
+            // 递归调用xml
             if (oneEle instanceof XmlElement) {
-                return isXmlElementNeedIgnore(ele, oneTableIgnore);
+                return isXmlElementNeedIgnore(ele, oneTableIgnore, statementTypeReplace);
             }
         }
         return false;
     }
 
-
-    private boolean isTextElementNeedIgnore(Element ele, List<String> oneTableIgnore) {
+    private boolean isTextElementNeedIgnore(Element ele, List<String> oneTableIgnore, StatementTypeReplace statementTypeReplace) {
         String text = ((TextElement) ele).getContent().trim();
         for (String oneIgnore : oneTableIgnore) {
-            if (text.matches("^" + oneIgnore + " =.*")) {
+            if (textMatch(text, oneIgnore, statementTypeReplace)) {
                 return true;
             }
         }
@@ -167,25 +236,50 @@ public class IgnoreColumnPlugin extends PluginAdapter {
 
 
     /**
-     * 忽略更新的字段
+     * 因为所有更新的语句都是这种模型
+     * 匹配 field_name = #{model.field_name,jdbcType=**}
      */
-    private void ignoreColumnsFilter(IntrospectedTable introspectedTable) {
-        List<IntrospectedColumn> baseColumns = introspectedTable.getBaseColumns();
+    private boolean textMatch(String targetText, String matchFieldName, StatementTypeReplace statementTypeReplace) {
+        return (targetText.matches(String.format(statementTypeReplace.getRegex(), matchFieldName)));
+    }
+
+    /**
+     * 忽略更新的字段操作
+     */
+    private void updateIgnoreColumnsElementFilter(List<Element> elements, IntrospectedTable introspectedTable) {
         String tableName = introspectedTable.getTableConfiguration().getTableName();
         List<String> oneTableIgnore = ignoreColumns.get(tableName);
+        if (oneTableIgnore == null || oneTableIgnore.size() == 0) {
+            return;
+        }
+        List<Element> needIgnore = new ArrayList<>();
 
-        List<IntrospectedColumn> needRemovedColumns = new ArrayList<>();
-
-        for (IntrospectedColumn oneColumn : baseColumns) {
-            if (oneTableIgnore.contains(oneColumn.getActualColumnName())) {
-                needRemovedColumns.add(oneColumn);
+        // 两种类型的ele处理，TextElement直接判断是否包含，XmlElement需要多层处理
+        for (Element ele : elements) {
+            if (ele instanceof TextElement) {
+                if (isTextElementNeedIgnore(ele, oneTableIgnore, StatementTypeReplace.FIELD_PLUS_EQUAL)) {
+                    needIgnore.add(ele);
+                }
             }
-
+            if (ele instanceof XmlElement) {
+                xmlElementHandle(((XmlElement) ele).getElements(), oneTableIgnore);
+            }
         }
-        for (IntrospectedColumn oneCol : needRemovedColumns) {
-            introspectedTable.getBaseColumns().remove(oneCol);
-        }
+        elements.removeAll(needIgnore);
     }
+
+    private void xmlElementHandle(List<Element> elements, List<String> oneTableIgnore) {
+        List<Element> needIgnore = new ArrayList<>();
+        for (Element ele : elements) {
+            if (ele instanceof XmlElement) {
+                if (isXmlElementNeedIgnore(ele, oneTableIgnore, StatementTypeReplace.FIELD_PLUS_EQUAL)) {
+                    needIgnore.add(ele);
+                }
+            }
+        }
+        elements.removeAll(needIgnore);
+    }
+
 
     public static void generate() {
         String config = IgnoreColumnPlugin.class.getClassLoader().getResource("mybatis-generator.xml").getFile();
@@ -195,5 +289,11 @@ public class IgnoreColumnPlugin extends PluginAdapter {
 
     public static void main(String[] args) {
         generate();
+        String content = "#{interfaces,jdbcType=LONGVARCHAR}, #{methods,jdbcType=LONGVARCHAR})";
+
+
+        System.out.println(content.replaceAll("#\\{methods,jdbcType=\\S+}\\)", ")"));
+        System.out.println(content);
+
     }
 }
