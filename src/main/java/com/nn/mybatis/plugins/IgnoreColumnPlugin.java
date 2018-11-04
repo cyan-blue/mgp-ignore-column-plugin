@@ -2,6 +2,7 @@ package com.nn.mybatis.plugins;
 
 import com.nn.mybatis.plugins.util.FieldUtils;
 import com.nn.mybatis.plugins.util.ReflectionUtils;
+import com.nn.mybatis.plugins.util.StringUtils;
 import org.mybatis.generator.api.IntrospectedColumn;
 import org.mybatis.generator.api.IntrospectedTable;
 import org.mybatis.generator.api.PluginAdapter;
@@ -25,20 +26,27 @@ import java.util.*;
 public class IgnoreColumnPlugin extends PluginAdapter {
 
     /**
+     * 需要忽略的数据库列的配置
+     */
+    private static final String IGNORE_COLUMNS_FLAG = "igcIgnoreColumns";
+    /**
      * 要忽略的数据库列
      */
     private Map<String, List<String>> ignoreColumns = new HashMap<>();
-
     /**
      * 要忽略的列的model名字
      */
     private Map<String, List<String>> ignoreColumnModelFields = new HashMap<>();
 
-    /**
-     * 需要忽略的数据库列的配置
-     */
-    private static final String IGNORE_COLUMNS_FLAG = "igcIgnoreColumns";
+    public static void generate() {
+        String config = IgnoreColumnPlugin.class.getClassLoader().getResource("mybatis-generator.xml").getFile();
+        String[] arg = {"-configfile", config, "-overwrite"};
+        ShellRunner.main(arg);
+    }
 
+    public static void main(String[] args) {
+        generate();
+    }
 
     @Override
     public boolean validate(List<String> list) {
@@ -60,14 +68,13 @@ public class IgnoreColumnPlugin extends PluginAdapter {
                 List<String> oneTableIgnoreColumns = Arrays.asList(entryEntry.getValue().toString().split(","));
                 ignoreColumns.putIfAbsent(tableConfiguration.getTableName(), oneTableIgnoreColumns);
                 List<String> modelNameList = new ArrayList<>();
-                for(String oneModelName: oneTableIgnoreColumns) {
+                for (String oneModelName : oneTableIgnoreColumns) {
                     modelNameList.add(FieldUtils.getModelNameByField(oneModelName));
                 }
                 ignoreColumnModelFields.putIfAbsent(tableConfiguration.getTableName(), modelNameList);
             }
         }
     }
-
 
     @Override
     public boolean modelSetterMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedColumn introspectedColumn, IntrospectedTable introspectedTable, ModelClassType modelClassType) {
@@ -83,7 +90,6 @@ public class IgnoreColumnPlugin extends PluginAdapter {
         }
         return super.modelSetterMethodGenerated(method, topLevelClass, introspectedColumn, introspectedTable, modelClassType);
     }
-
 
     @Override
     public boolean sqlMapInsertElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
@@ -102,7 +108,6 @@ public class IgnoreColumnPlugin extends PluginAdapter {
         updateIgnoreColumnsElementFilter(element.getElements(), introspectedTable);
         return super.sqlMapUpdateByExampleSelectiveElementGenerated(element, introspectedTable);
     }
-
 
     @Override
     public boolean sqlMapUpdateByExampleWithBLOBsElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
@@ -133,7 +138,6 @@ public class IgnoreColumnPlugin extends PluginAdapter {
         updateIgnoreColumnsElementFilter(element.getElements(), introspectedTable);
         return super.sqlMapUpdateByPrimaryKeyWithoutBLOBsElementGenerated(element, introspectedTable);
     }
-
 
     /**
      * 忽略insert语句中的字段
@@ -231,20 +235,11 @@ public class IgnoreColumnPlugin extends PluginAdapter {
     private boolean isTextElementNeedIgnore(Element ele, List<String> oneTableIgnore, StatementTypeReplace statementTypeReplace) {
         String text = ((TextElement) ele).getContent().trim();
         for (String oneIgnore : oneTableIgnore) {
-            if (textMatch(text, oneIgnore, statementTypeReplace)) {
+            if (StringUtils.isTextMatch(text, oneIgnore, statementTypeReplace)) {
                 return true;
             }
         }
         return false;
-    }
-
-
-    /**
-     * 因为所有更新的语句都是这种模型
-     * 匹配 field_name = #{model.field_name,jdbcType=**}
-     */
-    private boolean textMatch(String targetText, String matchFieldName, StatementTypeReplace statementTypeReplace) {
-        return (targetText.matches(String.format(statementTypeReplace.getRegex(), matchFieldName)));
     }
 
     /**
@@ -256,6 +251,9 @@ public class IgnoreColumnPlugin extends PluginAdapter {
         if (oneTableIgnore == null || oneTableIgnore.size() == 0) {
             return;
         }
+        // set fieldName = {*} 处理
+        handleFirstSetElement(elements, oneTableIgnore);
+
         List<Element> needIgnore = new ArrayList<>();
 
         // 两种类型的ele处理，TextElement直接判断是否包含，XmlElement需要多层处理
@@ -272,6 +270,26 @@ public class IgnoreColumnPlugin extends PluginAdapter {
         elements.removeAll(needIgnore);
     }
 
+    /**
+     * 处理set fieldName = {}
+     */
+    private void handleFirstSetElement(List<Element> elements, List<String> oneTableIgnore) {
+        for (Element ele : elements) {
+            if (ele instanceof TextElement) {
+                String text = ((TextElement) ele).getContent();
+                for (String oneIgnore : oneTableIgnore) {
+                    if (StringUtils.isTextMatch(text, oneIgnore, StatementTypeReplace.UPDATE_SET_PLUS_EQUAL)) {
+                        String replaceText = text.replaceAll(String.format(StatementTypeReplace.UPDATE_SET_PLUS_EQUAL.getRegex(), oneIgnore), "set ");
+                        if (!replaceText.equals(text)) {
+                            text = replaceText;
+                            ReflectionUtils.setFieldValue("content", ele, replaceText);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private void xmlElementHandle(List<Element> elements, List<String> oneTableIgnore) {
         List<Element> needIgnore = new ArrayList<>();
         for (Element ele : elements) {
@@ -282,16 +300,5 @@ public class IgnoreColumnPlugin extends PluginAdapter {
             }
         }
         elements.removeAll(needIgnore);
-    }
-
-
-    public static void generate() {
-        String config = IgnoreColumnPlugin.class.getClassLoader().getResource("mybatis-generator.xml").getFile();
-        String[] arg = {"-configfile", config, "-overwrite"};
-        ShellRunner.main(arg);
-    }
-
-    public static void main(String[] args) {
-        generate();
     }
 }

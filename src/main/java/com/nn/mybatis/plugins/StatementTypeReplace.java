@@ -12,6 +12,8 @@ public enum StatementTypeReplace {
 
     INSERT_SELECTIVE("\\#\\{%s,jdbcType.*"),
 
+    UPDATE_SET_PLUS_EQUAL("set %s = \\#\\{\\S+\\},"),
+
     FIELD_PLUS_EQUAL("^%s =.*");
 
     private String regex;

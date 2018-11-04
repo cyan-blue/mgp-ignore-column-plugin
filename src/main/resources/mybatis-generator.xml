@@ -4,22 +4,20 @@
         "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
 <generatorConfiguration>
 
-    <classPathEntry location="/Users/huangyan/software/mybatis generator/lib/mysql-connector-java-5.1.30.jar" />
+    <classPathEntry location="/Users/huangyan/software/mybatis generator/lib/mysql-connector-java-5.1.30.jar"/>
     <context id="DB2Tables" targetRuntime="MyBatis3">
 
         <plugin type="com.nn.mybatis.plugins.IgnoreColumnPlugin">
 
         </plugin>
         <commentGenerator>
-            <property name="suppressDate" value="true" />
-            <property name="suppressAllComments" value="true" />
+            <property name="suppressDate" value="true"/>
+            <property name="suppressAllComments" value="true"/>
         </commentGenerator>
 
-        <jdbcConnection driverClass="com.mysql.jdbc.Driver" connectionURL="jdbc:mysql://10.24.76.230:5002/atc" userId="atc" password="bw5NgraRYrBzkI">
-        </jdbcConnection>
 
         <javaTypeResolver>
-            <property name="forceBigDecimals" value="false" />
+            <property name="forceBigDecimals" value="false"/>
         </javaTypeResolver>
         <!--生成Model类存放位置-->
         <javaModelGenerator targetPackage="com.test" targetProject="src1">
@@ -39,7 +37,7 @@
                enableCountByExample="false" enableUpdateByExample="true"
                enableDeleteByExample="false" enableSelectByExample="true"
                selectByExampleQueryId="false">
-            <property name="igcIgnoreColumns" value="create_by,create_time,methods"/>
+            <property name="igcIgnoreColumns" value="app_count,create_time"/>
 
         </table>
 
