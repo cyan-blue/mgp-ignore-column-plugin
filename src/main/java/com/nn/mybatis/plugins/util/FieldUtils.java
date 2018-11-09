@@ -10,6 +10,7 @@ public class FieldUtils {
     }
 
     public static String getModelNameByField(String fieldName) {
+        fieldName = fieldName.toLowerCase();
         String[] splitFields = fieldName.split("_");
         if (splitFields.length == 1) {
             return splitFields[0];

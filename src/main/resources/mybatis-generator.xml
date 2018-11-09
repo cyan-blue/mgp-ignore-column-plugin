@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
 <generatorConfiguration>
 
-    <classPathEntry location="/Users/huangyan/software/mybatis generator/lib/mysql-connector-java-5.1.30.jar"/>
+    <classPathEntry location="/Users/huangyan/software/lib/mysql-connector-java-5.1.30.jar"/>
     <context id="DB2Tables" targetRuntime="MyBatis3">
 
         <plugin type="com.nn.mybatis.plugins.IgnoreColumnPlugin">
@@ -15,6 +15,10 @@
             <property name="suppressAllComments" value="true"/>
         </commentGenerator>
 
+        <!--数据库链接地址账号密码-->
+        <jdbcConnection driverClass="com.mysql.jdbc.Driver"
+                        connectionURL="jdbc:mysql://127.0.0.1:3306/huangyan_test" userId="huangyan" password="huangyan">
+        </jdbcConnection>
 
         <javaTypeResolver>
             <property name="forceBigDecimals" value="false"/>
@@ -33,11 +37,13 @@
             <property name="enableSubPackages" value="true"/>
         </javaClientGenerator>
         <!--生成对应表及类名-->
-        <table tableName="replay_operate_log" domainObjectName="ReplayOperateLogDTO"
+        <table tableName="Persons" domainObjectName="ReplayOperateLogDTO"
                enableCountByExample="false" enableUpdateByExample="true"
                enableDeleteByExample="false" enableSelectByExample="true"
                selectByExampleQueryId="false">
-            <property name="igcIgnoreColumns" value="app_count,create_time"/>
+            <property name="igcIgnoreColumns" value="LastName"/>
+            <!--<generatedKey column="ID_P" sqlStatement="JDBC" identity="true"/>-->
+
 
         </table>
 
